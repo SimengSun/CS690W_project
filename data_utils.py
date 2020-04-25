@@ -8,23 +8,27 @@ import torch.utils.data
 from torch.utils.data.dataloader import DataLoader
 random.seed(42)
 
-def get_dataloader(data, split, num_workers=2, bsz=50):
+def get_dataloader(data, split, num_workers=2, bsz=50, freq_dom=False):
 
 	x, y = data[f'x_{split}'], data[f'y_{split}']
-	dataset = Dataset(x, y)
+	dataset = Dataset(x, y, freq_dom=freq_dom)
 	dataloader = DataLoader(dataset, num_workers=2, batch_size=bsz)
 
 	return dataloader
 
 class Dataset(torch.utils.data.IterableDataset):
 
-	def __init__(self, x, y):
+	def __init__(self, x, y, freq_dom):
 
 		self.x = x
 		self.y = y
-		shuffle_idx = random.sample(range(x.shape[0]), x.shape[0])
+		n = x.shape[0]
+		shuffle_idx = random.sample(range(n), n)
 		self.x = self.x[shuffle_idx]
 		self.y = self.y[shuffle_idx]
+
+		if freq_dom:
+			self.x = self.x.reshape(n, -1)
 		self.data = torch.tensor(np.concatenate((self.x, self.y[:, np.newaxis]), axis=1)).float()
 
 		self.start = 0

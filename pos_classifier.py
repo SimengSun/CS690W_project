@@ -3,6 +3,8 @@ from torch import nn
 import torch.nn.functional as F
 import torch.optim as optim
 
+import pdb
+
 class ConvClassifier(nn.Module):
 
 	def __init__(self, conv1_out=3, conv1_k=3, pool1=5,
@@ -37,6 +39,43 @@ class ConvClassifier(nn.Module):
 		x = self.pool1(F.relu(self.conv1(x)))
 		x = self.pool2(F.relu(self.conv2(x)))
 		x = self.pool3(F.relu(self.conv3(x)))
+		
+		x = x.view(n, -1)
+		x = F.relu(self.fc1(x))
+		x = self.fc2(x)
+
+		return x
+
+class Conv2dClassifier(nn.Module):
+
+	def __init__(self, conv1_out=3, conv1_k=3, pool1=3,
+					   conv2_out=3, conv2_k=3, pool2=3,
+					   fc_dim=256, k=9, fc1_dim=624
+				):
+
+		super(Conv2dClassifier, self).__init__()
+
+		self.conv1 = torch.nn.Conv2d(1, conv1_out, conv1_k)
+		self.pool1 = nn.MaxPool2d(pool1)
+		self.conv2 = torch.nn.Conv2d(conv1_out, conv2_out, conv2_k)
+		self.pool2 = nn.MaxPool2d(pool2)
+
+		self.fc1 = nn.Linear(fc1_dim, fc_dim)
+		self.fc2 = nn.Linear(fc_dim, k)
+
+		self.reset_parameters()
+
+	def reset_parameters(self):
+		gain = nn.init.calculate_gain('relu')
+		nn.init.xavier_uniform_(self.fc1.weight, gain)
+		nn.init.xavier_uniform_(self.fc2.weight, gain)
+
+	def forward(self, x):
+
+		n = x.shape[0]
+		x = x[:, None, :]
+		x = self.pool1(F.relu(self.conv1(x)))
+		x = self.pool2(F.relu(self.conv2(x)))
 		
 		x = x.view(n, -1)
 		x = F.relu(self.fc1(x))
